@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 const props = defineProps({
     files: Array,
@@ -98,6 +98,32 @@ function copyLink(file) {
 function deleteFile(file) {
     if (!confirm(`Delete "${file.name}"? This can't be undone.`)) return;
     useForm({}).delete(route('files.destroy', file.id), { preserveScroll: true });
+}
+
+const renamingFileId = ref(null);
+const renameValue = ref('');
+const renameInput = ref(null);
+
+function startRename(file) {
+    renamingFileId.value = file.id;
+    renameValue.value = file.name;
+    nextTick(() => renameInput.value?.focus());
+}
+
+function cancelRename() {
+    renamingFileId.value = null;
+}
+
+function submitRename(file) {
+    const name = renameValue.value.trim();
+    if (!name || name === file.name) {
+        cancelRename();
+        return;
+    }
+    useForm({ name }).patch(route('files.update', file.id), {
+        preserveScroll: true,
+        onSuccess: cancelRename,
+    });
 }
 </script>
 
@@ -215,7 +241,17 @@ function deleteFile(file) {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CATEGORY_ICON_PATHS[file.category]" />
                                 </svg>
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                                    <input
+                                        v-if="renamingFileId === file.id"
+                                        ref="renameInput"
+                                        v-model="renameValue"
+                                        type="text"
+                                        class="w-full rounded-md border-gray-300 py-1 text-sm focus:border-violet-500 focus:ring-violet-500 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100"
+                                        @keyup.enter="submitRename(file)"
+                                        @keyup.esc="cancelRename"
+                                        @blur="submitRename(file)"
+                                    />
+                                    <p v-else class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                                         {{ file.name }}
                                     </p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -223,6 +259,15 @@ function deleteFile(file) {
                                     </p>
                                 </div>
                                 <div class="flex shrink-0 items-center gap-1">
+                                    <button
+                                        @click="startRename(file)"
+                                        title="Rename"
+                                        class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-violet-600 dark:hover:bg-gray-700"
+                                    >
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </button>
                                     <button
                                         @click="copyLink(file)"
                                         title="Copy download link"

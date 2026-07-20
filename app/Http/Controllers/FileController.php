@@ -65,6 +65,17 @@ class FileController extends Controller
         return back();
     }
 
+    public function update(Request $request, File $file): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        $file->update(['original_name' => trim($validated['name'])]);
+
+        return back();
+    }
+
     public function destroy(File $file): RedirectResponse
     {
         $file->delete();

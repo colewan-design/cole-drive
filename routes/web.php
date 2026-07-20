@@ -11,6 +11,7 @@ Route::get('/d/{uuid}', [FileController::class, 'download'])->name('files.downlo
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [FileController::class, 'index'])->name('dashboard');
     Route::post('/files', [FileController::class, 'store'])->name('files.store');
+    Route::patch('/files/{file}', [FileController::class, 'update'])->name('files.update');
     Route::delete('/files/{file}', [FileController::class, 'destroy'])->name('files.destroy');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
