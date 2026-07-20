@@ -16,6 +16,7 @@ class FileController extends Controller
     // (e.g. an .apk is structurally a zip, so fileinfo reports application/zip).
     private const EXTENSION_MIME_OVERRIDES = [
         'apk' => 'application/vnd.android.package-archive',
+        'aab' => 'application/octet-stream',
     ];
 
     public function index(): Response
