@@ -6,11 +6,18 @@ use App\Models\File;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class FileController extends Controller
 {
+    // PHP's content-sniffed MIME type for these extensions is unreliable
+    // (e.g. an .apk is structurally a zip, so fileinfo reports application/zip).
+    private const EXTENSION_MIME_OVERRIDES = [
+        'apk' => 'application/vnd.android.package-archive',
+    ];
+
     public function index(): Response
     {
         $files = File::latest()->get()->map(fn (File $file) => [
@@ -53,12 +60,13 @@ class FileController extends Controller
         ]);
 
         $uploaded = $request->file('file');
-        $path = $uploaded->store('uploads', 'local');
+        $extension = strtolower($uploaded->getClientOriginalExtension());
+        $path = $uploaded->storeAs('uploads', Str::uuid().'.'.$extension, 'local');
 
         $request->user()->files()->create([
             'original_name' => $uploaded->getClientOriginalName(),
             'path' => $path,
-            'mime_type' => $uploaded->getMimeType(),
+            'mime_type' => self::EXTENSION_MIME_OVERRIDES[$extension] ?? $uploaded->getMimeType(),
             'size' => $uploaded->getSize(),
         ]);
 
@@ -89,6 +97,8 @@ class FileController extends Controller
 
         $file->increment('download_count');
 
-        return Storage::disk('local')->download($file->path, $file->original_name);
+        return Storage::disk('local')->download($file->path, $file->original_name, [
+            'Content-Type' => $file->mime_type,
+        ]);
     }
 }
