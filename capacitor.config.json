@@ -1,0 +1,9 @@
+{
+    "appId": "com.colewan.drive",
+    "appName": "My Drive",
+    "webDir": "mobile-www",
+    "server": {
+        "url": "https://colewan-drive.salidumay.com",
+        "androidScheme": "https"
+    }
+}
