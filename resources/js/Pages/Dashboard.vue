@@ -9,13 +9,13 @@ const props = defineProps({
     categories: Object,
 });
 
-const CATEGORY_ICONS = {
-    Documents: '📄',
-    Pictures: '🖼️',
-    Video: '🎬',
-    Audio: '🎵',
-    'Apps & Archives': '📦',
-    Other: '🗂️',
+const CATEGORY_ICON_PATHS = {
+    Documents: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+    Pictures: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
+    Video: 'M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z',
+    Audio: 'M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-2c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z',
+    'Apps & Archives': 'M5 8h14M5 8a2 2 0 01-2-2V4a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8M10 12h4',
+    Other: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
 };
 
 const CATEGORY_ORDER = ['Documents', 'Pictures', 'Video', 'Audio', 'Apps & Archives', 'Other'];
@@ -179,7 +179,9 @@ function deleteFile(file) {
                                     ? 'border-violet-500 bg-violet-50 dark:bg-violet-950/30'
                                     : 'border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800'"
                             >
-                                <span class="text-2xl">{{ CATEGORY_ICONS[name] }}</span>
+                                <svg class="h-6 w-6 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CATEGORY_ICON_PATHS[name]" />
+                                </svg>
                                 <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-gray-100">
                                     {{ name }}
                                 </p>
@@ -209,7 +211,9 @@ function deleteFile(file) {
                                 :key="file.id"
                                 class="flex items-center gap-4 px-5 py-3"
                             >
-                                <span class="text-xl">{{ CATEGORY_ICONS[file.category] }}</span>
+                                <svg class="h-5 w-5 shrink-0 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CATEGORY_ICON_PATHS[file.category]" />
+                                </svg>
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
                                         {{ file.name }}
@@ -274,13 +278,20 @@ function deleteFile(file) {
                             :key="name"
                             class="flex items-center justify-between rounded-lg px-4 py-3 text-sm"
                         >
-                            <span class="text-gray-700 dark:text-gray-300">{{ CATEGORY_ICONS[name] }} {{ name }}</span>
+                            <span class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+                                <svg class="h-4 w-4 shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="CATEGORY_ICON_PATHS[name]" />
+                                </svg>
+                                {{ name }}
+                            </span>
                             <span class="text-gray-400">{{ humanSize(categories[name]?.size ?? 0) }}</span>
                         </div>
                     </div>
 
                     <div class="rounded-xl border-2 border-dashed border-violet-300 p-6 text-center dark:border-violet-800">
-                        <p class="text-2xl">⬆️</p>
+                        <svg class="mx-auto h-8 w-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 8l5-5 5 5M12 3v12" />
+                        </svg>
                         <p class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                             Drop your files
                         </p>
