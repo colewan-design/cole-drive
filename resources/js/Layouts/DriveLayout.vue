@@ -48,7 +48,7 @@ const sidebarOpen = ref(false);
 
         <div class="flex min-w-0 flex-1 flex-col">
             <header
-                class="flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white/80 px-4 backdrop-blur dark:border-white/5 dark:bg-gray-900/60 sm:px-6"
+                class="relative z-30 flex h-16 shrink-0 items-center gap-3 border-b border-gray-200 bg-white/80 px-4 backdrop-blur dark:border-white/5 dark:bg-gray-900/60 sm:px-6"
             >
                 <button
                     class="-ml-1 rounded-lg p-2 text-gray-500 hover:bg-gray-900/5 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100 lg:hidden"
