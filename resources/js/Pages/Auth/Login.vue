@@ -41,6 +41,12 @@ const submit = () => {
 
             <h1 class="mt-8 text-3xl font-bold text-white">Welcome back</h1>
             <p class="mt-2 text-sm text-violet-100">Sign in to access your files</p>
+            <p class="mt-3 text-sm text-violet-100/90">
+                Need an account?
+                <Link :href="route('register')" class="font-semibold text-white underline underline-offset-4">
+                    Create one here
+                </Link>
+            </p>
         </div>
 
         <div class="mx-auto flex w-full max-w-md flex-1 flex-col rounded-t-3xl bg-white px-6 pb-10 pt-8 shadow-xl dark:bg-gray-800">

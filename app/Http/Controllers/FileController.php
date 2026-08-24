@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\File;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -13,9 +14,9 @@ use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class FileController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
-        $files = File::latest()->get()->map(fn (File $file) => [
+        $files = $request->user()->files()->latest()->get()->map(fn (File $file) => [
             'id' => $file->id,
             'uuid' => $file->uuid,
             'name' => $file->original_name,
@@ -72,6 +73,8 @@ class FileController extends Controller
 
     public function update(Request $request, File $file): RedirectResponse
     {
+        $file = $this->ownedFile($request->user(), $file);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
         ]);
@@ -81,15 +84,19 @@ class FileController extends Controller
         return back();
     }
 
-    public function destroy(File $file): RedirectResponse
+    public function destroy(Request $request, File $file): RedirectResponse
     {
+        $file = $this->ownedFile($request->user(), $file);
+
         $file->delete();
 
         return back();
     }
 
-    public function preview(File $file)
+    public function preview(Request $request, File $file)
     {
+        $file = $this->ownedFile($request->user(), $file);
+
         abort_unless($this->isPreviewable($file), 415);
 
         return $this->serveFile($file, HeaderUtils::DISPOSITION_INLINE);
@@ -107,6 +114,7 @@ class FileController extends Controller
     public function download(string $uuid)
     {
         $file = File::where('uuid', $uuid)->firstOrFail();
+        abort_unless(Storage::disk('local')->exists($file->path), 404);
         $file->increment('download_count');
 
         return $this->serveFile($file, HeaderUtils::DISPOSITION_ATTACHMENT);
@@ -197,5 +205,12 @@ class FileController extends Controller
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ], true);
+    }
+
+    private function ownedFile(User $user, File $file): File
+    {
+        abort_unless($file->user_id === $user->id, 404);
+
+        return $file;
     }
 }
