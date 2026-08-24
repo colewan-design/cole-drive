@@ -1,0 +1,23 @@
+[Unit]
+Description=Colewan Drive Laravel scheduler tick
+After=network.target mariadb.service redis-server.service
+
+[Service]
+Type=oneshot
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/colewan-drive
+# One pass of the scheduler. Laravel expects this every minute and decides
+# internally what is actually due, so the unit is cheap when nothing is
+# scheduled. Driven by colewan-drive-scheduler.timer rather than root's
+# crontab, which is empty on this box — the other services here are all
+# systemd units, so this keeps `systemctl list-timers` the single place to
+# look.
+ExecStart=/usr/bin/php8.3 /var/www/colewan-drive/artisan schedule:run
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=colewan-drive-scheduler
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full

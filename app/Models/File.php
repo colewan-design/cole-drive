@@ -11,6 +11,13 @@ class File extends Model
 {
     use HasFactory;
 
+    // PHP's content-sniffed MIME type for these extensions is unreliable
+    // (e.g. an .apk is structurally a zip, so fileinfo reports application/zip).
+    public const EXTENSION_MIME_OVERRIDES = [
+        'apk' => 'application/vnd.android.package-archive',
+        'aab' => 'application/octet-stream',
+    ];
+
     protected $fillable = [
         'uuid',
         'user_id',

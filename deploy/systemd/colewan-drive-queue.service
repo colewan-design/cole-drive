@@ -1,0 +1,28 @@
+[Unit]
+Description=Colewan Drive Laravel queue worker
+After=network.target mariadb.service redis-server.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/colewan-drive
+# Nothing in the app queues work today, so this worker is idle by design. It is
+# installed anyway because QUEUE_CONNECTION=redis: the first job that is ever
+# dispatched would otherwise sit in Redis unattempted, with no error anywhere
+# to say why. --max-time recycles the process hourly so a long-lived worker
+# cannot leak; Restart=always brings it straight back. --tries gives a failing
+# job three attempts before it lands in failed_jobs instead of retrying forever.
+ExecStart=/usr/bin/php8.3 /var/www/colewan-drive/artisan queue:work redis --sleep=3 --tries=3 --backoff=10 --max-time=3600
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=colewan-drive-queue
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

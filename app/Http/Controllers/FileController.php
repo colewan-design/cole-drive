@@ -9,16 +9,10 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 
 class FileController extends Controller
 {
-    // PHP's content-sniffed MIME type for these extensions is unreliable
-    // (e.g. an .apk is structurally a zip, so fileinfo reports application/zip).
-    private const EXTENSION_MIME_OVERRIDES = [
-        'apk' => 'application/vnd.android.package-archive',
-        'aab' => 'application/octet-stream',
-    ];
-
     public function index(): Response
     {
         $files = File::latest()->get()->map(fn (File $file) => [
@@ -61,13 +55,13 @@ class FileController extends Controller
         ]);
 
         $uploaded = $request->file('file');
-        $extension = strtolower($uploaded->getClientOriginalExtension());
-        $path = $uploaded->storeAs('uploads', Str::uuid().'.'.$extension, 'local');
+        $extension = $this->normalizeExtension($uploaded->getClientOriginalExtension());
+        $path = $uploaded->storeAs('uploads', Str::uuid().($extension === '' ? '' : '.'.$extension), 'local');
 
         $request->user()->files()->create([
             'original_name' => $uploaded->getClientOriginalName(),
             'path' => $path,
-            'mime_type' => self::EXTENSION_MIME_OVERRIDES[$extension] ?? $uploaded->getMimeType(),
+            'mime_type' => File::EXTENSION_MIME_OVERRIDES[$extension] ?? $uploaded->getMimeType(),
             'size' => $uploaded->getSize(),
         ]);
 
@@ -95,11 +89,58 @@ class FileController extends Controller
     public function download(string $uuid)
     {
         $file = File::where('uuid', $uuid)->firstOrFail();
+        $disk = Storage::disk('local');
+
+        // A row whose file is gone would otherwise become a 500 under "php"
+        // delivery and an opaque nginx 404 under "xaccel". `files:rebuild`
+        // reports these; answering 404 here keeps the two paths consistent.
+        abort_unless($disk->exists($file->path), 404);
 
         $file->increment('download_count');
 
-        return Storage::disk('local')->download($file->path, $file->original_name, [
-            'Content-Type' => $file->mime_type,
+        $headers = [
+            'Content-Type' => $file->mime_type ?: 'application/octet-stream',
+        ];
+
+        if (config('downloads.delivery') !== 'xaccel') {
+            return $disk->download($file->path, $file->original_name, $headers);
+        }
+
+        // Hand the transfer to nginx. It streams the file straight off disk
+        // while this worker is released for the next request, and it answers
+        // Range requests itself so interrupted downloads can resume.
+        //
+        // Content-Length is deliberately not set: nginx derives it from the
+        // file it serves, and a stale value here would truncate the response.
+        return response('', 200, $headers + [
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                HeaderUtils::DISPOSITION_ATTACHMENT,
+                $file->original_name,
+                Str::ascii($file->original_name) ?: 'download',
+            ),
+            'X-Accel-Redirect' => rtrim(config('downloads.xaccel_prefix'), '/').'/'.$this->encodePath($file->path),
         ]);
+    }
+
+    /**
+     * Reduce a client-supplied extension to characters that are safe in a
+     * stored filename. The stored name is later handed back to nginx as an
+     * X-Accel-Redirect URI, so anything exotic here has to survive a second
+     * round of URI parsing on the way out.
+     */
+    private function normalizeExtension(string $extension): string
+    {
+        return substr(preg_replace('/[^a-z0-9]/', '', strtolower($extension)), 0, 16);
+    }
+
+    /**
+     * Percent-encode each segment of a stored path. nginx decodes the
+     * X-Accel-Redirect URI before resolving it against the internal location,
+     * so the encoding has to be applied per segment to leave the separators
+     * intact.
+     */
+    private function encodePath(string $path): string
+    {
+        return implode('/', array_map('rawurlencode', explode('/', $path)));
     }
 }

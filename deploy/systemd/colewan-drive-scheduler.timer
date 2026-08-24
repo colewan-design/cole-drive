@@ -1,0 +1,14 @@
+[Unit]
+Description=Run the Colewan Drive scheduler every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+# The box has five other apps whose timers could line up on the same second.
+# A small jitter keeps the minute boundary from becoming a load spike.
+AccuracySec=10s
+RandomizedDelaySec=15s
+Persistent=false
+Unit=colewan-drive-scheduler.service
+
+[Install]
+WantedBy=timers.target
