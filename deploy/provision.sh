@@ -16,7 +16,7 @@ set -euo pipefail
 
 APP_DIR=/var/www/colewan-drive
 APP_REPO=https://github.com/colewan-design/cole-drive.git
-APP_DOMAIN=colewan-drive.salidumay.com
+APP_DOMAIN=drive.uitph.com
 DB_NAME=colewan_drive
 DB_USER=colewan_drive
 PHP=8.3

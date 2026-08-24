@@ -43,10 +43,11 @@ released as soon as the header is sent, and Range requests (resumable
 downloads) work without any code. This site also gets its own pool so its
 uploads cannot starve the shared one.
 
-**DNS points at the old host.** `colewan-drive.salidumay.com` resolves to
-Hostinger shared-hosting addresses — several A records and several AAAA
-records — none of which is this VPS. See the cutover section; this is the one
-with a trap in it.
+**The domain had to move too.** The app answered on
+`colewan-drive.salidumay.com`, whose records point at Hostinger shared hosting
+and still do. Rather than untangle that record set, the app moved to
+`drive.uitph.com` — a fresh subdomain pointed straight at this VPS. See the DNS
+section for why that was the easier path.
 
 ## Layout
 
@@ -75,34 +76,37 @@ units, validates both nginx and FPM config before reloading them, then calls
 
 It deliberately stops short of TLS, because that needs DNS first.
 
-## DNS cutover
+## DNS
 
-The record set currently points at Hostinger shared hosting — multiple A
-records on `145.79.x.x` and multiple AAAA records on `2a02:4780:…`. **Delete
-all of them**, then add:
+The site is served at **`drive.uitph.com`**, a single A record:
 
 ```
-A     colewan-drive   187.124.138.58
-AAAA  colewan-drive   2a02:4780:59:353b::1      (or no AAAA at all)
+A     drive   187.124.138.58
 ```
 
-The trap is leaving any of the old records behind. A stray A record round-robins
-half your traffic back to the old host; a stray AAAA sends every IPv6-capable
-client there. Either way you get a confusing half-migrated state where the site
-looks fine in your browser — and **certbot's validation follows the same
-records**, so the certificate request fails for reasons the error message will
-not explain.
+A fresh subdomain was chosen over reusing `colewan-drive.salidumay.com`
+deliberately. That name carries several A records on `145.79.x.x` and several
+AAAA records on `2a02:4780:…`, all pointing at Hostinger shared hosting, and
+partially-migrated record sets are the classic way to lose an afternoon: a
+stray A record round-robins half the traffic back to the old host, a stray AAAA
+sends every IPv6-capable client there, and **certbot's validation follows the
+same records** — so the certificate fails while the site looks fine in your
+browser. `uitph.com` has no wildcard record, so nothing shadows `drive`.
 
-Confirm before continuing:
+If you ever do point `colewan-drive.salidumay.com` here as well, delete every
+old A and AAAA record for it first, and add the name to `server_name` in the
+vhost so certbot can cover both.
+
+Confirm before issuing a certificate:
 
 ```bash
-getent hosts colewan-drive.salidumay.com     # expect 187.124.138.58 / 2a02:4780:59:353b::1
+getent hosts drive.uitph.com     # expect 187.124.138.58
 ```
 
 Then issue the certificate:
 
 ```bash
-certbot --nginx -d colewan-drive.salidumay.com
+certbot --nginx -d drive.uitph.com
 ```
 
 Certbot rewrites the vhost with the TLS block and the http→https redirect, the
@@ -162,10 +166,10 @@ looks like it did nothing.
 ## Verifying it works
 
 ```bash
-curl -I https://colewan-drive.salidumay.com/up          # 200
+curl -I https://drive.uitph.com/up          # 200
 
 # the whole point — nginx should serve the bytes, not PHP
-curl -sI https://colewan-drive.salidumay.com/d/<uuid> | grep -i -E 'content-length|accept-ranges'
+curl -sI https://drive.uitph.com/d/<uuid> | grep -i -E 'content-length|accept-ranges'
 ```
 
 `Accept-Ranges: bytes` on a download response is the signal that
@@ -174,7 +178,7 @@ would be absent. A resumable download is the user-visible version of the same
 check:
 
 ```bash
-curl -r 0-1023 -o /dev/null -w '%{http_code}\n' https://colewan-drive.salidumay.com/d/<uuid>   # 206
+curl -r 0-1023 -o /dev/null -w '%{http_code}\n' https://drive.uitph.com/d/<uuid>   # 206
 ```
 
 Then upload something over 100 MB through the UI. That exercises nginx's body

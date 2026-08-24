@@ -3,7 +3,7 @@
     "appName": "My Drive",
     "webDir": "mobile-www",
     "server": {
-        "url": "https://colewan-drive.salidumay.com",
+        "url": "https://drive.uitph.com",
         "androidScheme": "https"
     }
 }

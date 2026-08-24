@@ -106,9 +106,9 @@ say "Health check"
 # it, port 80 answers 301 to https and -L follows it through. Anything else —
 # 500, 502, 404 — means the app did not come back up.
 code=$(curl -sS -o /dev/null -L -w '%{http_code}' \
-    --resolve "colewan-drive.salidumay.com:80:127.0.0.1" \
-    --resolve "colewan-drive.salidumay.com:443:127.0.0.1" \
-    http://colewan-drive.salidumay.com/up 2>/dev/null || echo 000)
+    --resolve "drive.uitph.com:80:127.0.0.1" \
+    --resolve "drive.uitph.com:443:127.0.0.1" \
+    http://drive.uitph.com/up 2>/dev/null || echo 000)
 
 if [[ $code == 200 ]]; then
     echo "/up -> HTTP 200"
