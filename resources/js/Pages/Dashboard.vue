@@ -11,36 +11,38 @@ const props = defineProps({
 
 // Tone classes are written out in full rather than composed at runtime —
 // Tailwind scans this file as text, so an interpolated class name would never
-// make it into the stylesheet.
+// make it into the stylesheet. Each carries a light pair and a dark pair,
+// because the pale shade that reads well on a dark panel drops to roughly 2:1
+// against white.
 const CATEGORIES = [
     {
         name: 'Documents',
-        tone: 'text-filetype-document bg-filetype-document/10',
+        tone: 'text-filetype-document-light bg-filetype-document-light/10 dark:text-filetype-document dark:bg-filetype-document/10',
         icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
     },
     {
         name: 'Pictures',
-        tone: 'text-filetype-picture bg-filetype-picture/10',
+        tone: 'text-filetype-picture-light bg-filetype-picture-light/10 dark:text-filetype-picture dark:bg-filetype-picture/10',
         icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z',
     },
     {
         name: 'Video',
-        tone: 'text-filetype-video bg-filetype-video/10',
+        tone: 'text-filetype-video-light bg-filetype-video-light/10 dark:text-filetype-video dark:bg-filetype-video/10',
         icon: 'M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z',
     },
     {
         name: 'Audio',
-        tone: 'text-filetype-audio bg-filetype-audio/10',
+        tone: 'text-filetype-audio-light bg-filetype-audio-light/10 dark:text-filetype-audio dark:bg-filetype-audio/10',
         icon: 'M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-2c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z',
     },
     {
         name: 'Apps & Archives',
-        tone: 'text-filetype-archive bg-filetype-archive/10',
+        tone: 'text-filetype-archive-light bg-filetype-archive-light/10 dark:text-filetype-archive dark:bg-filetype-archive/10',
         icon: 'M5 8h14M5 8a2 2 0 01-2-2V4a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 01-2 2M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8M10 12h4',
     },
     {
         name: 'Other',
-        tone: 'text-filetype-other bg-filetype-other/10',
+        tone: 'text-filetype-other-light bg-filetype-other-light/10 dark:text-filetype-other dark:bg-filetype-other/10',
         icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
     },
 ];
@@ -64,11 +66,15 @@ function humanSize(bytes) {
 
 function formatDate(iso) {
     const d = new Date(iso);
-    return d.toLocaleDateString(undefined, {
-        month: 'short',
-        day: '2-digit',
-        year: 'numeric',
-    }) + ', ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false });
+    return (
+        d.toLocaleDateString(undefined, {
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric',
+        }) +
+        ', ' +
+        d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', hour12: false })
+    );
 }
 
 const search = ref('');
@@ -215,9 +221,9 @@ function deleteFile(file) {
                     <span>{{ uploadForm.processing ? `Uploading ${uploadForm.progress?.percentage ?? 0}%` : 'New' }}</span>
                 </button>
 
-                <div v-if="uploadForm.processing" class="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                <div v-if="uploadForm.processing" class="mt-2 h-1 overflow-hidden rounded-full bg-gray-900/10 dark:bg-white/10">
                     <div
-                        class="h-full rounded-full bg-brand-400 transition-all duration-200"
+                        class="h-full rounded-full bg-brand-500 transition-all duration-200 dark:bg-brand-400"
                         :style="{ width: `${uploadForm.progress?.percentage ?? 0}%` }"
                     />
                 </div>
@@ -227,8 +233,8 @@ function deleteFile(file) {
                 <button
                     class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
                     :class="activeCategory === null
-                        ? 'bg-brand-600/15 font-medium text-brand-300'
-                        : 'text-gray-300 hover:bg-white/5'"
+                        ? 'bg-brand-500/10 font-medium text-brand-700 dark:bg-brand-600/15 dark:text-brand-300'
+                        : 'text-gray-600 hover:bg-gray-900/5 dark:text-gray-300 dark:hover:bg-white/5'"
                     @click="activeCategory = null"
                 >
                     <svg class="h-[1.125rem] w-[1.125rem] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -247,11 +253,11 @@ function deleteFile(file) {
                     :key="category.name"
                     class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
                     :class="activeCategory === category.name
-                        ? 'bg-brand-600/15 font-medium text-brand-300'
-                        : 'text-gray-300 hover:bg-white/5'"
+                        ? 'bg-brand-500/10 font-medium text-brand-700 dark:bg-brand-600/15 dark:text-brand-300'
+                        : 'text-gray-600 hover:bg-gray-900/5 dark:text-gray-300 dark:hover:bg-white/5'"
                     @click="activeCategory = activeCategory === category.name ? null : category.name"
                 >
-                    <svg class="shrink-0" style="width:1.125rem;height:1.125rem" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg class="h-[1.125rem] w-[1.125rem] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" :d="category.icon" />
                     </svg>
                     <span class="flex-1 truncate text-left">{{ category.name }}</span>
@@ -259,14 +265,14 @@ function deleteFile(file) {
                 </button>
             </nav>
 
-            <div class="border-t border-white/5 p-4">
+            <div class="border-t border-gray-200 p-4 dark:border-white/5">
                 <div class="mb-2 flex items-baseline justify-between text-xs">
-                    <span class="font-medium text-gray-300">Storage</span>
+                    <span class="font-medium text-gray-700 dark:text-gray-300">Storage</span>
                     <span class="text-gray-500">{{ usedPercent }}%</span>
                 </div>
-                <div class="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div class="h-1.5 overflow-hidden rounded-full bg-gray-900/10 dark:bg-white/10">
                     <div
-                        class="h-full rounded-full bg-gradient-to-r from-brand-500 to-brand-400"
+                        class="h-full rounded-full bg-gradient-to-r from-brand-600 to-brand-400"
                         :style="{ width: `${Math.max(usedPercent, 1)}%` }"
                     />
                 </div>
@@ -286,7 +292,7 @@ function deleteFile(file) {
                     v-model="search"
                     type="text"
                     placeholder="Search drive"
-                    class="w-full rounded-xl border-0 bg-white/5 py-2 pl-9 pr-3 text-sm text-gray-100 ring-1 ring-inset ring-white/10 transition placeholder:text-gray-500 focus:bg-white/10 focus:ring-2 focus:ring-inset focus:ring-brand-500"
+                    class="w-full rounded-xl border-0 bg-gray-900/5 py-2 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-900/10 transition placeholder:text-gray-500 focus:bg-white focus:ring-2 focus:ring-inset focus:ring-brand-500 dark:bg-white/5 dark:text-gray-100 dark:ring-white/10 dark:focus:bg-white/10"
                 />
             </div>
         </template>
@@ -306,10 +312,10 @@ function deleteFile(file) {
                         <span>My Files</span>
                         <template v-if="activeCategory">
                             <span>/</span>
-                            <span class="text-gray-300">{{ activeCategory }}</span>
+                            <span class="text-gray-700 dark:text-gray-300">{{ activeCategory }}</span>
                         </template>
                     </nav>
-                    <h1 class="mt-1 text-xl font-semibold tracking-tight text-gray-50">
+                    <h1 class="mt-1 text-xl font-semibold tracking-tight text-gray-900 dark:text-gray-50">
                         {{ activeCategory ?? 'My Files' }}
                     </h1>
                 </div>
@@ -321,32 +327,32 @@ function deleteFile(file) {
                 </p>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-white/5 bg-gray-900/50">
+            <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/5 dark:bg-gray-900/50 dark:shadow-none">
                 <!-- Column headers double as the sort control. Hidden on small
                      screens, where the row collapses to two stacked lines. -->
-                <div class="hidden border-b border-white/5 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 sm:flex">
-                    <button class="flex flex-1 items-center gap-1 text-left transition hover:text-gray-300" @click="toggleSort('name')">
+                <div class="hidden border-b border-gray-200 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:border-white/5 sm:flex">
+                    <button class="flex flex-1 items-center gap-1 text-left transition hover:text-gray-900 dark:hover:text-gray-300" @click="toggleSort('name')">
                         Name
-                        <span v-if="sortKey === 'name'" class="text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
+                        <span v-if="sortKey === 'name'" class="text-brand-600 dark:text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
                     </button>
-                    <button class="flex w-28 items-center gap-1 transition hover:text-gray-300" @click="toggleSort('size')">
+                    <button class="flex w-28 items-center gap-1 transition hover:text-gray-900 dark:hover:text-gray-300" @click="toggleSort('size')">
                         Size
-                        <span v-if="sortKey === 'size'" class="text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
+                        <span v-if="sortKey === 'size'" class="text-brand-600 dark:text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
                     </button>
-                    <button class="flex w-48 items-center gap-1 transition hover:text-gray-300" @click="toggleSort('created_at')">
+                    <button class="flex w-48 items-center gap-1 transition hover:text-gray-900 dark:hover:text-gray-300" @click="toggleSort('created_at')">
                         Modified
-                        <span v-if="sortKey === 'created_at'" class="text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
+                        <span v-if="sortKey === 'created_at'" class="text-brand-600 dark:text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
                     </button>
                     <span class="w-32 text-right">Actions</span>
                 </div>
 
                 <div v-if="!visibleFiles.length" class="px-6 py-20 text-center">
-                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-gray-900/5 dark:bg-white/5">
                         <svg class="h-6 w-6 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                         </svg>
                     </div>
-                    <p class="mt-4 text-sm font-medium text-gray-300">
+                    <p class="mt-4 text-sm font-medium text-gray-700 dark:text-gray-300">
                         {{ files.length ? 'Nothing matches that filter' : 'No files yet' }}
                     </p>
                     <p class="mt-1 text-xs text-gray-500">
@@ -354,11 +360,11 @@ function deleteFile(file) {
                     </p>
                 </div>
 
-                <ul v-else class="divide-y divide-white/5">
+                <ul v-else class="divide-y divide-gray-200 dark:divide-white/5">
                     <li
                         v-for="file in visibleFiles"
                         :key="file.id"
-                        class="group flex flex-col gap-2 px-4 py-2.5 transition hover:bg-white/[0.03] sm:flex-row sm:items-center sm:gap-0"
+                        class="group flex flex-col gap-2 px-4 py-2.5 transition hover:bg-gray-900/[0.03] dark:hover:bg-white/[0.03] sm:flex-row sm:items-center sm:gap-0"
                     >
                         <div class="flex min-w-0 flex-1 items-center gap-3">
                             <span
@@ -376,22 +382,22 @@ function deleteFile(file) {
                                     :ref="(el) => { if (el) renameInput = el }"
                                     v-model="renameValue"
                                     type="text"
-                                    class="w-full rounded-lg border-0 bg-white/10 py-1 text-sm text-gray-100 ring-1 ring-inset ring-brand-500 focus:ring-2 focus:ring-inset focus:ring-brand-400"
+                                    class="w-full rounded-lg border-0 bg-gray-900/5 py-1 text-sm text-gray-900 ring-1 ring-inset ring-brand-500 focus:ring-2 focus:ring-inset focus:ring-brand-500 dark:bg-white/10 dark:text-gray-100 dark:focus:ring-brand-400"
                                     @keyup.enter="submitRename(file)"
                                     @keyup.esc="cancelRename"
                                     @blur="submitRename(file)"
                                 />
-                                <p v-else class="truncate text-sm text-gray-100">{{ file.name }}</p>
-                                <p class="truncate text-xs text-gray-500 sm:hidden">
+                                <p v-else class="truncate text-sm text-gray-900 dark:text-gray-100">{{ file.name }}</p>
+                                <p class="truncate text-xs text-gray-500 dark:text-gray-400 sm:hidden">
                                     {{ file.human_size }} · {{ formatDate(file.created_at) }}
                                 </p>
                             </div>
                         </div>
 
-                        <div class="hidden w-28 shrink-0 text-sm text-gray-400 sm:block">
+                        <div class="hidden w-28 shrink-0 text-sm text-gray-500 dark:text-gray-400 sm:block">
                             {{ file.human_size }}
                         </div>
-                        <div class="hidden w-48 shrink-0 text-sm text-gray-400 sm:block">
+                        <div class="hidden w-48 shrink-0 text-sm text-gray-500 dark:text-gray-400 sm:block">
                             {{ formatDate(file.created_at) }}
                         </div>
 
@@ -400,7 +406,7 @@ function deleteFile(file) {
                         <div class="flex shrink-0 items-center justify-end gap-0.5 sm:w-32 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                             <button
                                 title="Share link"
-                                class="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-brand-300"
+                                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-brand-300"
                                 @click="openShare(file)"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -410,7 +416,7 @@ function deleteFile(file) {
                             <a
                                 :href="file.download_url"
                                 title="Download"
-                                class="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-brand-300"
+                                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-brand-300"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
@@ -418,7 +424,7 @@ function deleteFile(file) {
                             </a>
                             <button
                                 title="Rename"
-                                class="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-brand-300"
+                                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-brand-300"
                                 @click="startRename(file)"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -427,7 +433,7 @@ function deleteFile(file) {
                             </button>
                             <button
                                 title="Delete"
-                                class="rounded-lg p-2 text-gray-400 transition hover:bg-white/10 hover:text-red-400"
+                                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-red-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-red-400"
                                 @click="deleteFile(file)"
                             >
                                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -443,13 +449,13 @@ function deleteFile(file) {
                  released anywhere rather than onto a small well. -->
             <div
                 v-if="isDragging"
-                class="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-brand-400 bg-gray-950/80 backdrop-blur-sm"
+                class="pointer-events-none absolute inset-4 z-20 flex items-center justify-center rounded-2xl border-2 border-dashed border-brand-500 bg-gray-50/85 backdrop-blur-sm dark:border-brand-400 dark:bg-gray-950/80"
             >
                 <div class="text-center">
-                    <svg class="mx-auto h-8 w-8 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <svg class="mx-auto h-8 w-8 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                     </svg>
-                    <p class="mt-2 text-sm font-medium text-brand-300">Drop to upload</p>
+                    <p class="mt-2 text-sm font-medium text-brand-700 dark:text-brand-300">Drop to upload</p>
                 </div>
             </div>
         </div>
@@ -457,14 +463,14 @@ function deleteFile(file) {
         <!-- -------------------------------------------------- share dialog -->
         <div
             v-if="sharing"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-sm"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm dark:bg-gray-950/70"
             @click.self="sharing = null"
         >
-            <div class="w-full max-w-md rounded-2xl border border-white/10 bg-gray-800 p-5 shadow-2xl">
+            <div class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-gray-800">
                 <div class="mb-1 flex items-start justify-between gap-4">
-                    <h2 class="text-sm font-semibold text-gray-100">Share via link</h2>
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-gray-100">Share via link</h2>
                     <button
-                        class="-mr-1 -mt-1 rounded-lg p-1 text-gray-500 transition hover:bg-white/10 hover:text-gray-200"
+                        class="-mr-1 -mt-1 rounded-lg p-1 text-gray-500 transition hover:bg-gray-900/10 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-gray-200"
                         aria-label="Close"
                         @click="sharing = null"
                     >
@@ -474,15 +480,16 @@ function deleteFile(file) {
                     </button>
                 </div>
 
-                <p class="mb-4 truncate text-xs text-gray-400">
-                    Shareable link for <span class="text-gray-300">{{ sharing.name }}</span>
+                <p class="mb-4 truncate text-xs text-gray-500 dark:text-gray-400">
+                    Shareable link for
+                    <span class="text-gray-700 dark:text-gray-300">{{ sharing.name }}</span>
                 </p>
 
                 <div class="flex items-center gap-2">
                     <input
                         :value="sharing.download_url"
                         readonly
-                        class="min-w-0 flex-1 rounded-lg border-0 bg-white/5 py-2 text-xs text-gray-300 ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-brand-500"
+                        class="min-w-0 flex-1 rounded-lg border-0 bg-gray-900/5 py-2 text-xs text-gray-700 ring-1 ring-inset ring-gray-900/10 focus:ring-2 focus:ring-inset focus:ring-brand-500 dark:bg-white/5 dark:text-gray-300 dark:ring-white/10"
                         @focus="$event.target.select()"
                     />
                     <button

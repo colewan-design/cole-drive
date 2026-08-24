@@ -10,11 +10,13 @@ export default {
         './resources/js/**/*.vue',
     ],
 
-    // The drive commits to a dark violet look rather than following the OS.
-    // Switching from the default 'media' strategy to 'class' — with `dark` set
-    // on <html> — means every dark: variant Breeze already ships (login,
-    // profile, modals, form controls) lights up in the new palette instead of
-    // needing to be rewritten one component at a time.
+    // 'class' rather than the default 'media' so the theme can be chosen in the
+    // app instead of only following the OS. useTheme.js owns the `dark` class
+    // on <html>; a snippet in app.blade.php sets it before first paint.
+    //
+    // It also means every dark: variant Breeze already ships (login, profile,
+    // modals, form controls) works in the new palette without being rewritten
+    // one component at a time.
     darkMode: 'class',
 
     theme: {
@@ -55,13 +57,19 @@ export default {
 
                 // One colour per file category, so a row is identifiable from
                 // the icon alone before the name is read.
+                //
+                // Two shades each: the DEFAULT is tuned for a dark panel, the
+                // `light` variant is darkened for the same icon on white, where
+                // the pale shade would drop to roughly 2:1 against the
+                // background. Used as
+                // `text-filetype-document-light dark:text-filetype-document`.
                 filetype: {
-                    document: '#60a5fa',
-                    picture: '#c084fc',
-                    video: '#f472b6',
-                    audio: '#fbbf24',
-                    archive: '#fb923c',
-                    other: '#94a3b8',
+                    document: { light: '#2563eb', DEFAULT: '#60a5fa' },
+                    picture: { light: '#9333ea', DEFAULT: '#c084fc' },
+                    video: { light: '#db2777', DEFAULT: '#f472b6' },
+                    audio: { light: '#b45309', DEFAULT: '#fbbf24' },
+                    archive: { light: '#ea580c', DEFAULT: '#fb923c' },
+                    other: { light: '#475569', DEFAULT: '#94a3b8' },
                 },
             },
         },

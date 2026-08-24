@@ -1,13 +1,31 @@
 <!DOCTYPE html>
-{{-- `dark` is set here rather than left to the OS: the drive has one look, and
-     tailwind.config.js runs in class mode so this switch drives every
-     dark: variant in the app. --}}
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title inertia>{{ config('app.name', 'UITPH Drive') }}</title>
+
+        {{-- Runs before the stylesheet paints, so a dark-mode reload never
+             flashes white. Deliberately inline and dependency-free: anything
+             deferred to the bundle would land after the first paint.
+             The storage key must match resources/js/composables/useTheme.js. --}}
+        <script>
+            (function () {
+                var prefersDark = window.matchMedia
+                    && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                var choice = null;
+
+                try {
+                    choice = localStorage.getItem('uitph-drive-theme');
+                } catch (e) {
+                    // Blocked site data throws rather than returning null.
+                }
+
+                var dark = choice === 'dark' || (choice !== 'light' && prefersDark);
+                document.documentElement.classList.toggle('dark', dark);
+            })();
+        </script>
 
         <!-- Favicon -->
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -24,7 +42,7 @@
         @vite(['resources/js/app.js', "resources/js/Pages/{$page['component']}.vue"])
         @inertiaHead
     </head>
-    <body class="bg-gray-950 font-sans text-gray-100 antialiased">
+    <body class="bg-gray-50 font-sans text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100">
         @inertia
     </body>
 </html>
