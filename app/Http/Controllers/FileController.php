@@ -26,6 +26,7 @@ class FileController extends Controller
             'download_count' => $file->download_count,
             'download_url' => route('files.download', $file->uuid),
             'preview_url' => route('files.preview', $file),
+            'public_preview_url' => route('files.public-preview', $file->uuid),
             'created_at' => $file->created_at->toIso8601String(),
         ]);
 
@@ -90,6 +91,15 @@ class FileController extends Controller
     public function preview(File $file)
     {
         abort_unless($this->isPreviewable($file), 415);
+
+        return $this->serveFile($file, HeaderUtils::DISPOSITION_INLINE);
+    }
+
+    public function publicPreview(string $uuid)
+    {
+        $file = File::where('uuid', $uuid)->firstOrFail();
+
+        abort_unless($this->isOfficePreviewable($file), 415);
 
         return $this->serveFile($file, HeaderUtils::DISPOSITION_INLINE);
     }
@@ -167,10 +177,25 @@ class FileController extends Controller
             || str_starts_with($mime, 'video/')
             || str_starts_with($mime, 'audio/')
             || str_starts_with($mime, 'text/')
+            || $this->isOfficePreviewable($file)
             || in_array($mime, [
                 'application/pdf',
                 'application/json',
                 'application/xml',
             ], true);
+    }
+
+    private function isOfficePreviewable(File $file): bool
+    {
+        return in_array($file->mime_type, [
+            'application/msword',
+            'application/rtf',
+            'text/rtf',
+            'application/vnd.ms-excel',
+            'application/vnd.ms-powerpoint',
+            'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ], true);
     }
 }

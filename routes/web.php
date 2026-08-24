@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::redirect('/', '/dashboard');
 
 Route::get('/d/{uuid}', [FileController::class, 'download'])->name('files.download');
+Route::get('/v/{uuid}', [FileController::class, 'publicPreview'])->name('files.public-preview');
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [FileController::class, 'index'])->name('dashboard');

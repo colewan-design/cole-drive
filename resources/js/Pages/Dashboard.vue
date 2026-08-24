@@ -9,6 +9,7 @@ const props = defineProps({
     categories: Object,
 });
 
+const OFFICE_VIEWER_BASE_URL = 'https://view.officeapps.live.com/op/embed.aspx?src=';
 const TEXT_PREVIEW_LIMIT_BYTES = 2 * 1024 * 1024;
 
 // Tone classes are written out in full rather than composed at runtime —
@@ -128,10 +129,28 @@ function previewKindOf(file) {
     if (mime === 'application/pdf') return 'pdf';
     if (strStartsWith(mime, 'video/')) return 'video';
     if (strStartsWith(mime, 'audio/')) return 'audio';
+    if (isOfficePreviewable(file)) return 'office';
     if (strStartsWith(mime, 'text/') && file.size <= TEXT_PREVIEW_LIMIT_BYTES) return 'text';
     if (['application/json', 'application/xml'].includes(mime) && file.size <= TEXT_PREVIEW_LIMIT_BYTES) return 'text';
 
     return null;
+}
+
+function isOfficePreviewable(file) {
+    return [
+        'application/msword',
+        'application/rtf',
+        'text/rtf',
+        'application/vnd.ms-excel',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ].includes(file.mime_type ?? '');
+}
+
+function officeViewerUrl(file) {
+    return `${OFFICE_VIEWER_BASE_URL}${encodeURIComponent(file.public_preview_url)}`;
 }
 
 /* ---------------------------------------------------------------- uploads */
@@ -662,6 +681,20 @@ function deleteFile(file) {
                         :title="`Preview of ${previewing.name}`"
                         class="h-[72vh] w-full rounded-xl border border-gray-200 bg-white dark:border-white/10"
                     />
+
+                    <div
+                        v-else-if="previewing.preview_kind === 'office'"
+                        class="space-y-3"
+                    >
+                        <iframe
+                            :src="officeViewerUrl(previewing)"
+                            :title="`Preview of ${previewing.name}`"
+                            class="h-[72vh] w-full rounded-xl border border-gray-200 bg-white dark:border-white/10"
+                        />
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            This preview is rendered by Microsoft Office for the web. If it fails to load, use Download.
+                        </p>
+                    </div>
 
                     <div
                         v-else-if="previewing.preview_kind === 'video'"
