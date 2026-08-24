@@ -188,6 +188,7 @@ settings that most often disagree.
 | Download returns the PHP source | the `^~` modifier was dropped — the `\.php$` regex is winning the match |
 | Deploy appears to change nothing | php-fpm was not reloaded (`opcache.validate_timestamps=0`) |
 | 502 | `journalctl -u php8.3-fpm`, and check the socket path matches the pool |
+| `artisan tinker` refuses to start | www-data's `$HOME` (`/var/www`) is not writable by it; run `runuser -u www-data -- env HOME=/tmp php8.3 artisan tinker` |
 
 Logs: `/var/log/nginx/colewan-drive.error.log`,
 `/var/log/php8.3-fpm-colewan-drive.log`, `storage/logs/laravel-*.log`,

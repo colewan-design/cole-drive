@@ -20,6 +20,12 @@ say() { printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 
 cd "$APP_DIR"
 
+# git runs as root here while the tree is owned by www-data, and git refuses to
+# operate on another user's repository unless it is marked safe. Without this
+# the release-stamp lookup at the end fails with "dubious ownership".
+git config --global --get-all safe.directory 2>/dev/null | grep -qx "$APP_DIR" \
+    || git config --global --add safe.directory "$APP_DIR"
+
 # Composer and npm need a writable HOME for their caches. Without this they
 # fall back to /var/www and litter the web root with dot-directories.
 export COMPOSER_HOME=/var/www/.composer
