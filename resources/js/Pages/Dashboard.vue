@@ -121,27 +121,87 @@ const fileInput = ref(null);
 const isDragging = ref(false);
 const uploadForm = useForm({ file: null });
 
+// A selection is queued and sent one file per request rather than as a single
+// multi-file post. Inertia keeps only one visit in flight — a second post would
+// cancel the first — and one request per file also keeps every upload inside
+// the pool's post_max_size, which a batch of large files would blow past.
+const uploadQueue = ref([]);
+const uploadTotal = ref(0);
+const uploadSettled = ref(0);
+const failedUploads = ref([]);
+
+const isUploading = computed(() => uploadForm.processing || uploadQueue.value.length > 0);
+
+// Progress across the whole batch: the files already settled, plus however far
+// the one on the wire has got.
+const uploadPercent = computed(() => {
+    if (!uploadTotal.value) return 0;
+    const current = (uploadForm.progress?.percentage ?? 0) / 100;
+
+    return Math.round(((uploadSettled.value + current) / uploadTotal.value) * 100);
+});
+
+const uploadLabel = computed(() => {
+    if (uploadTotal.value <= 1) return `Uploading ${uploadPercent.value}%`;
+
+    const position = Math.min(uploadSettled.value + 1, uploadTotal.value);
+
+    return `Uploading ${position}/${uploadTotal.value} · ${uploadPercent.value}%`;
+});
+
 function triggerFilePicker() {
     fileInput.value?.click();
 }
 
 function onFileChosen(event) {
-    const file = event.target.files[0];
-    if (file) uploadFile(file);
+    enqueueUploads(event.target.files);
     event.target.value = '';
 }
 
 function onDrop(event) {
     isDragging.value = false;
-    const file = event.dataTransfer.files[0];
-    if (file) uploadFile(file);
+    enqueueUploads(event.dataTransfer.files);
 }
 
-function uploadFile(file) {
+function enqueueUploads(fileList) {
+    const files = Array.from(fileList ?? []);
+    if (!files.length) return;
+
+    // Files added while a run is going join that run, so the counter stays
+    // honest; only a fresh run clears the previous one's failures.
+    if (!isUploading.value) failedUploads.value = [];
+
+    uploadQueue.value.push(...files);
+    uploadTotal.value += files.length;
+
+    if (!uploadForm.processing) uploadNext();
+}
+
+function uploadNext() {
+    const file = uploadQueue.value.shift();
+
+    if (!file) {
+        uploadTotal.value = 0;
+        uploadSettled.value = 0;
+
+        return;
+    }
+
     uploadForm.file = file;
     uploadForm.post(route('files.store'), {
         preserveScroll: true,
-        onSuccess: () => uploadForm.reset(),
+        // Without this the rest of the batch would be dropped on the floor with
+        // nothing on screen to say why, since the form's errors are cleared by
+        // the next file's request.
+        onError: (errors) => failedUploads.value.push({
+            name: file.name,
+            message: errors.file ?? 'Upload failed.',
+        }),
+        onFinish: () => {
+            uploadSettled.value += 1;
+            uploadForm.reset();
+            uploadNext();
+        },
     });
 }
 
@@ -210,23 +270,35 @@ function deleteFile(file) {
         <!-- ------------------------------------------------------ sidebar -->
         <template #sidebar>
             <div class="px-3">
+                <!-- Left clickable while a batch runs: more files can be added
+                     to the queue mid-run. -->
                 <button
-                    :disabled="uploadForm.processing"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-600/20 transition hover:bg-brand-500"
                     @click="triggerFilePicker"
                 >
-                    <svg v-if="!uploadForm.processing" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <svg v-if="!isUploading" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                    <span>{{ uploadForm.processing ? `Uploading ${uploadForm.progress?.percentage ?? 0}%` : 'New' }}</span>
+                    <span>{{ isUploading ? uploadLabel : 'New' }}</span>
                 </button>
 
-                <div v-if="uploadForm.processing" class="mt-2 h-1 overflow-hidden rounded-full bg-gray-900/10 dark:bg-white/10">
+                <div v-if="isUploading" class="mt-2 h-1 overflow-hidden rounded-full bg-gray-900/10 dark:bg-white/10">
                     <div
                         class="h-full rounded-full bg-brand-500 transition-all duration-200 dark:bg-brand-400"
-                        :style="{ width: `${uploadForm.progress?.percentage ?? 0}%` }"
+                        :style="{ width: `${uploadPercent}%` }"
                     />
                 </div>
+
+                <ul v-if="failedUploads.length" class="mt-2 space-y-1">
+                    <li
+                        v-for="failure in failedUploads"
+                        :key="failure.name"
+                        class="text-xs text-red-600 dark:text-red-400"
+                    >
+                        <span class="block truncate font-medium">{{ failure.name }}</span>
+                        <span class="block truncate">{{ failure.message }}</span>
+                    </li>
+                </ul>
             </div>
 
             <nav class="mt-6 flex-1 space-y-0.5 overflow-y-auto px-3">
@@ -304,7 +376,7 @@ function deleteFile(file) {
             @dragleave.prevent="isDragging = false"
             @drop.prevent="onDrop"
         >
-            <input ref="fileInput" type="file" class="hidden" @change="onFileChosen" />
+            <input ref="fileInput" type="file" multiple class="hidden" @change="onFileChosen" />
 
             <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -356,7 +428,7 @@ function deleteFile(file) {
                         {{ files.length ? 'Nothing matches that filter' : 'No files yet' }}
                     </p>
                     <p class="mt-1 text-xs text-gray-500">
-                        {{ files.length ? 'Try a different search or category.' : 'Drop a file anywhere, or use the New button.' }}
+                        {{ files.length ? 'Try a different search or category.' : 'Drop files anywhere, or use the New button.' }}
                     </p>
                 </div>
 
