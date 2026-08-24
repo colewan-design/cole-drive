@@ -116,14 +116,14 @@ cat <<NEXT
 
 $(printf '\033[1;32mProvisioned.\033[0m') Two things are still needed, in this order:
 
-  1. DNS. $APP_DOMAIN currently resolves to the old shared host over
-     IPv6 only, and has no A record at all. At the DNS provider:
+  1. DNS. $APP_DOMAIN still points at Hostinger shared hosting.
+     Delete every existing A and AAAA record for it, then add:
 
         A     colewan-drive   187.124.138.58
-        AAAA  colewan-drive   2a02:4780:59:353b::1     (or delete the AAAA records)
+        AAAA  colewan-drive   2a02:4780:59:353b::1     (or no AAAA at all)
 
-     Leaving the old AAAA in place is the trap: IPv6-capable clients keep
-     reaching the shared host, and certbot's own validation will too.
+     Leaving any old record behind is the trap: traffic round-robins back to
+     the shared host, and certbot's own validation follows the same records.
 
   2. TLS, once DNS has propagated (getent hosts $APP_DOMAIN):
 

@@ -43,9 +43,10 @@ released as soon as the header is sent, and Range requests (resumable
 downloads) work without any code. This site also gets its own pool so its
 uploads cannot starve the shared one.
 
-**DNS points at the old host.** `colewan-drive.salidumay.com` currently
-resolves to two Hostinger IPv6 addresses and has **no A record at all**. See
-the cutover section — this is the one with a trap in it.
+**DNS points at the old host.** `colewan-drive.salidumay.com` resolves to
+Hostinger shared-hosting addresses — several A records and several AAAA
+records — none of which is this VPS. See the cutover section; this is the one
+with a trap in it.
 
 ## Layout
 
@@ -76,18 +77,21 @@ It deliberately stops short of TLS, because that needs DNS first.
 
 ## DNS cutover
 
-At the DNS provider for `salidumay.com`:
+The record set currently points at Hostinger shared hosting — multiple A
+records on `145.79.x.x` and multiple AAAA records on `2a02:4780:…`. **Delete
+all of them**, then add:
 
 ```
 A     colewan-drive   187.124.138.58
-AAAA  colewan-drive   2a02:4780:59:353b::1      (or delete the AAAA records)
+AAAA  colewan-drive   2a02:4780:59:353b::1      (or no AAAA at all)
 ```
 
-The trap is the existing AAAA records. If they are left pointing at Hostinger,
-IPv6-capable clients keep reaching the old shared host and you get a confusing
-half-migrated state — and **certbot's own validation will go there too**, so
-the certificate request fails with the site apparently working fine in your
-browser.
+The trap is leaving any of the old records behind. A stray A record round-robins
+half your traffic back to the old host; a stray AAAA sends every IPv6-capable
+client there. Either way you get a confusing half-migrated state where the site
+looks fine in your browser — and **certbot's validation follows the same
+records**, so the certificate request fails for reasons the error message will
+not explain.
 
 Confirm before continuing:
 
