@@ -25,6 +25,7 @@ class FileController extends Controller
             'mime_type' => $file->mime_type,
             'download_count' => $file->download_count,
             'download_url' => route('files.download', $file->uuid),
+            'preview_url' => route('files.preview', $file),
             'created_at' => $file->created_at->toIso8601String(),
         ]);
 
@@ -86,40 +87,19 @@ class FileController extends Controller
         return back();
     }
 
+    public function preview(File $file)
+    {
+        abort_unless($this->isPreviewable($file), 415);
+
+        return $this->serveFile($file, HeaderUtils::DISPOSITION_INLINE);
+    }
+
     public function download(string $uuid)
     {
         $file = File::where('uuid', $uuid)->firstOrFail();
-        $disk = Storage::disk('local');
-
-        // A row whose file is gone would otherwise become a 500 under "php"
-        // delivery and an opaque nginx 404 under "xaccel". `files:rebuild`
-        // reports these; answering 404 here keeps the two paths consistent.
-        abort_unless($disk->exists($file->path), 404);
-
         $file->increment('download_count');
 
-        $headers = [
-            'Content-Type' => $file->mime_type ?: 'application/octet-stream',
-        ];
-
-        if (config('downloads.delivery') !== 'xaccel') {
-            return $disk->download($file->path, $file->original_name, $headers);
-        }
-
-        // Hand the transfer to nginx. It streams the file straight off disk
-        // while this worker is released for the next request, and it answers
-        // Range requests itself so interrupted downloads can resume.
-        //
-        // Content-Length is deliberately not set: nginx derives it from the
-        // file it serves, and a stale value here would truncate the response.
-        return response('', 200, $headers + [
-            'Content-Disposition' => HeaderUtils::makeDisposition(
-                HeaderUtils::DISPOSITION_ATTACHMENT,
-                $file->original_name,
-                Str::ascii($file->original_name) ?: 'download',
-            ),
-            'X-Accel-Redirect' => rtrim(config('downloads.xaccel_prefix'), '/').'/'.$this->encodePath($file->path),
-        ]);
+        return $this->serveFile($file, HeaderUtils::DISPOSITION_ATTACHMENT);
     }
 
     /**
@@ -142,5 +122,55 @@ class FileController extends Controller
     private function encodePath(string $path): string
     {
         return implode('/', array_map('rawurlencode', explode('/', $path)));
+    }
+
+    private function serveFile(File $file, string $disposition)
+    {
+        $disk = Storage::disk('local');
+
+        // A row whose file is gone would otherwise become a 500 under "php"
+        // delivery and an opaque nginx 404 under "xaccel". `files:rebuild`
+        // reports these; answering 404 here keeps the two paths consistent.
+        abort_unless($disk->exists($file->path), 404);
+
+        $headers = [
+            'Content-Type' => $file->mime_type ?: 'application/octet-stream',
+            'Content-Disposition' => HeaderUtils::makeDisposition(
+                $disposition,
+                $file->original_name,
+                Str::ascii($file->original_name) ?: 'download',
+            ),
+        ];
+
+        if (config('downloads.delivery') !== 'xaccel') {
+            return $disposition === HeaderUtils::DISPOSITION_ATTACHMENT
+                ? $disk->download($file->path, $file->original_name, $headers)
+                : response()->file($disk->path($file->path), $headers);
+        }
+
+        // Hand the transfer to nginx. It streams the file straight off disk
+        // while this worker is released for the next request, and it answers
+        // Range requests itself so interrupted downloads can resume.
+        //
+        // Content-Length is deliberately not set: nginx derives it from the
+        // file it serves, and a stale value here would truncate the response.
+        return response('', 200, $headers + [
+            'X-Accel-Redirect' => rtrim(config('downloads.xaccel_prefix'), '/').'/'.$this->encodePath($file->path),
+        ]);
+    }
+
+    private function isPreviewable(File $file): bool
+    {
+        $mime = $file->mime_type ?? '';
+
+        return str_starts_with($mime, 'image/')
+            || str_starts_with($mime, 'video/')
+            || str_starts_with($mime, 'audio/')
+            || str_starts_with($mime, 'text/')
+            || in_array($mime, [
+                'application/pdf',
+                'application/json',
+                'application/xml',
+            ], true);
     }
 }

@@ -9,6 +9,8 @@ const props = defineProps({
     categories: Object,
 });
 
+const TEXT_PREVIEW_LIMIT_BYTES = 2 * 1024 * 1024;
+
 // Tone classes are written out in full rather than composed at runtime —
 // Tailwind scans this file as text, so an interpolated class name would never
 // make it into the stylesheet. Each carries a light pair and a dark pair,
@@ -114,6 +116,23 @@ const usedPercent = computed(() => {
     if (!props.storage.total) return 0;
     return Math.min(100, Math.round((props.storage.used / props.storage.total) * 100));
 });
+
+function strStartsWith(value, prefix) {
+    return value.slice(0, prefix.length) === prefix;
+}
+
+function previewKindOf(file) {
+    const mime = file.mime_type ?? '';
+
+    if (strStartsWith(mime, 'image/')) return 'image';
+    if (mime === 'application/pdf') return 'pdf';
+    if (strStartsWith(mime, 'video/')) return 'video';
+    if (strStartsWith(mime, 'audio/')) return 'audio';
+    if (strStartsWith(mime, 'text/') && file.size <= TEXT_PREVIEW_LIMIT_BYTES) return 'text';
+    if (['application/json', 'application/xml'].includes(mime) && file.size <= TEXT_PREVIEW_LIMIT_BYTES) return 'text';
+
+    return null;
+}
 
 /* ---------------------------------------------------------------- uploads */
 
@@ -253,6 +272,47 @@ async function copyShareLink() {
         // selectable so the link is still reachable by hand.
         copied.value = false;
     }
+}
+
+/* ---------------------------------------------------------------- preview */
+
+const previewing = ref(null);
+const previewText = ref('');
+const previewLoading = ref(false);
+const previewError = ref('');
+
+async function openPreview(file) {
+    const kind = previewKindOf(file);
+    if (!kind) return;
+
+    previewing.value = { ...file, preview_kind: kind };
+    previewText.value = '';
+    previewError.value = '';
+
+    if (kind !== 'text') return;
+
+    previewLoading.value = true;
+
+    try {
+        const response = await fetch(file.preview_url, {
+            headers: { Accept: 'text/plain' },
+        });
+
+        if (!response.ok) throw new Error(`Preview failed with status ${response.status}`);
+
+        previewText.value = await response.text();
+    } catch {
+        previewError.value = 'This file could not be previewed right now.';
+    } finally {
+        previewLoading.value = false;
+    }
+}
+
+function closePreview() {
+    previewing.value = null;
+    previewText.value = '';
+    previewLoading.value = false;
+    previewError.value = '';
 }
 
 /* ----------------------------------------------------------------- delete */
@@ -415,7 +475,7 @@ function deleteFile(file) {
                         Modified
                         <span v-if="sortKey === 'created_at'" class="text-brand-600 dark:text-brand-400">{{ sortDir === 'asc' ? '↑' : '↓' }}</span>
                     </button>
-                    <span class="w-32 text-right">Actions</span>
+                    <span class="w-40 text-right">Actions</span>
                 </div>
 
                 <div v-if="!visibleFiles.length" class="px-6 py-20 text-center">
@@ -459,6 +519,13 @@ function deleteFile(file) {
                                     @keyup.esc="cancelRename"
                                     @blur="submitRename(file)"
                                 />
+                                <button
+                                    v-else-if="previewKindOf(file)"
+                                    class="truncate text-left text-sm text-gray-900 transition hover:text-brand-600 dark:text-gray-100 dark:hover:text-brand-300"
+                                    @click="openPreview(file)"
+                                >
+                                    {{ file.name }}
+                                </button>
                                 <p v-else class="truncate text-sm text-gray-900 dark:text-gray-100">{{ file.name }}</p>
                                 <p class="truncate text-xs text-gray-500 dark:text-gray-400 sm:hidden">
                                     {{ file.human_size }} · {{ formatDate(file.created_at) }}
@@ -475,7 +542,18 @@ function deleteFile(file) {
 
                         <!-- Actions stay mounted so keyboard users can reach
                              them; they only fade in on hover for the mouse. -->
-                        <div class="flex shrink-0 items-center justify-end gap-0.5 sm:w-32 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                        <div class="flex shrink-0 items-center justify-end gap-0.5 sm:w-40 sm:opacity-0 sm:transition sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
+                            <button
+                                v-if="previewKindOf(file)"
+                                title="Preview"
+                                class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-brand-300"
+                                @click="openPreview(file)"
+                            >
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5s8.268 2.943 9.542 7c-1.274 4.057-5.065 7-9.542 7S3.732 16.057 2.458 12z" />
+                                </svg>
+                            </button>
                             <button
                                 title="Share link"
                                 class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-brand-600 dark:text-gray-400 dark:hover:bg-white/10 dark:hover:text-brand-300"
@@ -528,6 +606,106 @@ function deleteFile(file) {
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-8m0 0l-3 3m3-3l3 3M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                     </svg>
                     <p class="mt-2 text-sm font-medium text-brand-700 dark:text-brand-300">Drop to upload</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ------------------------------------------------ preview dialog -->
+        <div
+            v-if="previewing"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 p-4 backdrop-blur-sm dark:bg-gray-950/70"
+            @click.self="closePreview"
+        >
+            <div class="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-white/10 dark:bg-gray-900">
+                <div class="flex items-start justify-between gap-4 border-b border-gray-200 px-5 py-4 dark:border-white/10">
+                    <div class="min-w-0">
+                        <h2 class="truncate text-sm font-semibold text-gray-900 dark:text-gray-100">Preview</h2>
+                        <p class="mt-1 truncate text-xs text-gray-500 dark:text-gray-400">
+                            {{ previewing.name }} - {{ previewing.human_size }}
+                        </p>
+                    </div>
+
+                    <div class="flex shrink-0 items-center gap-2">
+                        <a
+                            :href="previewing.download_url"
+                            class="rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-brand-500"
+                        >
+                            Download
+                        </a>
+                        <button
+                            class="rounded-lg p-2 text-gray-500 transition hover:bg-gray-900/10 hover:text-gray-900 dark:hover:bg-white/10 dark:hover:text-gray-200"
+                            aria-label="Close preview"
+                            @click="closePreview"
+                        >
+                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="min-h-0 flex-1 overflow-auto bg-gray-50 p-4 dark:bg-gray-950/70">
+                    <div
+                        v-if="previewing.preview_kind === 'image'"
+                        class="flex min-h-[24rem] items-center justify-center"
+                    >
+                        <img
+                            :src="previewing.preview_url"
+                            :alt="previewing.name"
+                            class="max-h-[72vh] max-w-full rounded-xl object-contain shadow-lg"
+                        />
+                    </div>
+
+                    <iframe
+                        v-else-if="previewing.preview_kind === 'pdf'"
+                        :src="previewing.preview_url"
+                        :title="`Preview of ${previewing.name}`"
+                        class="h-[72vh] w-full rounded-xl border border-gray-200 bg-white dark:border-white/10"
+                    />
+
+                    <div
+                        v-else-if="previewing.preview_kind === 'video'"
+                        class="flex min-h-[24rem] items-center justify-center"
+                    >
+                        <video
+                            :src="previewing.preview_url"
+                            controls
+                            class="max-h-[72vh] w-full rounded-xl bg-black shadow-lg"
+                        />
+                    </div>
+
+                    <div
+                        v-else-if="previewing.preview_kind === 'audio'"
+                        class="flex min-h-[24rem] flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 dark:border-white/10 dark:bg-gray-900"
+                    >
+                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-600/10 text-brand-600 dark:bg-brand-400/10 dark:text-brand-300">
+                            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 19V6l12-2v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-2c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                            </svg>
+                        </div>
+                        <p class="text-sm text-gray-600 dark:text-gray-300">Audio preview</p>
+                        <audio :src="previewing.preview_url" controls class="w-full max-w-2xl" />
+                    </div>
+
+                    <div
+                        v-else-if="previewing.preview_kind === 'text'"
+                        class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/10 dark:bg-gray-900"
+                    >
+                        <div v-if="previewLoading" class="px-4 py-6 text-sm text-gray-500 dark:text-gray-400">
+                            Loading preview...
+                        </div>
+                        <div v-else-if="previewError" class="px-4 py-6 text-sm text-red-600 dark:text-red-400">
+                            {{ previewError }}
+                        </div>
+                        <pre v-else class="max-h-[72vh] overflow-auto p-4 text-sm leading-6 text-gray-800 dark:text-gray-200">{{ previewText }}</pre>
+                    </div>
+
+                    <div
+                        v-else
+                        class="flex min-h-[24rem] items-center justify-center rounded-xl border border-dashed border-gray-300 bg-white px-6 py-10 text-sm text-gray-500 dark:border-white/10 dark:bg-gray-900 dark:text-gray-400"
+                    >
+                        Preview is not available for this file type.
+                    </div>
                 </div>
             </div>
         </div>
