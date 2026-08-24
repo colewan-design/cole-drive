@@ -1,5 +1,5 @@
 [Unit]
-Description=Run the Colewan Drive scheduler every minute
+Description=Run the UITPH Drive scheduler every minute
 
 [Timer]
 OnCalendar=*-*-* *:*:00

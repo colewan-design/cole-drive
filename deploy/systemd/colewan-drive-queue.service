@@ -1,5 +1,5 @@
 [Unit]
-Description=Colewan Drive Laravel queue worker
+Description=UITPH Drive Laravel queue worker
 After=network.target mariadb.service redis-server.service
 
 [Service]

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Deploy or update Colewan Drive on the VPS. Run as root:
+# Deploy or update UITPH Drive on the VPS. Run as root:
 #
 #   bash /var/www/colewan-drive/deploy/deploy.sh
 #

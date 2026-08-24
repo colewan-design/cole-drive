@@ -1,5 +1,5 @@
 [Unit]
-Description=Colewan Drive Laravel scheduler tick
+Description=UITPH Drive Laravel scheduler tick
 After=network.target mariadb.service redis-server.service
 
 [Service]

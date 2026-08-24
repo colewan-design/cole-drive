@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# First-time setup for Colewan Drive on the VPS. Run once, as root:
+# First-time setup for UITPH Drive on the VPS. Run once, as root:
 #
 #   bash deploy/provision.sh
 #

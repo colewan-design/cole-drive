@@ -1,7 +1,13 @@
-# Deploying Colewan Drive on the VPS
+# Deploying UITPH Drive on the VPS
 
 This app was built against shared hosting. This document covers what had to
 change to run it on the VPS at `187.124.138.58`, and how to deploy it.
+
+The product is **UITPH Drive**; the deployment slug is still `colewan-drive`
+everywhere below — the directory, the FPM pool, the systemd units, the log
+files, the Redis prefix. Those were left alone deliberately when the app was
+renamed: they are internal identifiers on a working server, and changing them
+would mean re-provisioning it for no user-visible gain.
 
 ## The server it is going onto
 

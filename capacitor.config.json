@@ -1,6 +1,6 @@
 {
     "appId": "com.colewan.drive",
-    "appName": "My Drive",
+    "appName": "UITPH Drive",
     "webDir": "mobile-www",
     "server": {
         "url": "https://drive.uitph.com",
