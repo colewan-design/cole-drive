@@ -112,6 +112,13 @@ certbot --nginx -d drive.uitph.com
 Certbot rewrites the vhost with the TLS block and the http→https redirect, the
 same way the other sites on this box were set up.
 
+Because certbot edits the installed vhost in place, `deploy/nginx/colewan-drive.conf`
+in the repo is the pre-TLS form and no longer matches what is running.
+`provision.sh` detects this and refuses to overwrite it. To change the vhost
+after TLS is in place, install the file manually and re-run the certbot command
+above to restore the TLS block. Routine `deploy.sh` runs never touch nginx
+config, so this only comes up when the vhost itself changes.
+
 ## Moving the existing data across
 
 Uploads live in `storage/app/private/uploads` on the old host, and the file

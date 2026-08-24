@@ -84,8 +84,18 @@ install -m 0644 "$REPO_DIR/deploy/php-fpm/colewan-drive.conf" \
     "/etc/php/$PHP/fpm/pool.d/colewan-drive.conf"
 
 say "Installing nginx site"
-install -m 0644 "$REPO_DIR/deploy/nginx/colewan-drive.conf" \
-    /etc/nginx/sites-available/colewan-drive
+# certbot edits the installed vhost in place to add the TLS block and the
+# http->https redirect. Overwriting it from the repo would silently take the
+# site back to plain HTTP, so once certbot has touched it this step stands
+# aside. To adopt vhost changes afterwards: install the file by hand, then
+# re-run certbot to put the TLS block back.
+if grep -q "managed by Certbot" /etc/nginx/sites-available/colewan-drive 2>/dev/null; then
+    warn "Vhost carries certbot's TLS block — leaving it alone."
+    warn "For vhost changes: install it manually, then 'certbot --nginx -d $APP_DOMAIN'."
+else
+    install -m 0644 "$REPO_DIR/deploy/nginx/colewan-drive.conf" \
+        /etc/nginx/sites-available/colewan-drive
+fi
 ln -sfn /etc/nginx/sites-available/colewan-drive /etc/nginx/sites-enabled/colewan-drive
 
 say "Installing systemd units"
